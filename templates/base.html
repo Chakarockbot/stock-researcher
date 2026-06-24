@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}StockResearcher{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css?v=12">
+  <script src="/static/refresh-anim.js"></script>
+  <!-- Apply saved theme before paint to prevent flash -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('sr-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">
+    <img src="/static/logo.png" alt="StockResearcher" class="brand-logo">
+    StockResearcher
+  </a>
+
+  <div class="nav-links">
+    <a href="/" {% if request.url.path == "/" %}class="active"{% endif %}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/trades" {% if request.url.path == "/trades" %}class="active"{% endif %}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Paper Trades
+    </a>
+    <a href="/history" {% if request.url.path == "/history" %}class="active"{% endif %}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><polyline points="3 16 3 11 8 11"/></svg>
+      History
+    </a>
+    <a href="/glossary" {% if request.url.path == "/glossary" %}class="active"{% endif %}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Glossary
+    </a>
+    <a href="/settings" {% if request.url.path == "/settings" %}class="active"{% endif %}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+  </div>
+
+  <div class="nav-right">
+    {% set current_user = request.session.get('user') %}
+    {% if current_user %}
+    <span class="nav-user">{{ current_user }}</span>
+    <a href="/logout" class="btn-logout" title="Sign out">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </a>
+    {% endif %}
+    <div class="theme-switcher">
+      <svg class="theme-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <select id="theme-select" onchange="setTheme(this.value)" title="Switch theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="midnight">Midnight</option>
+        <option value="dusk">Dusk</option>
+      </select>
+    </div>
+    <a href="/refresh" class="btn-refresh" id="refresh-btn" onclick="startRefresh(event)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Refresh Data
+    </a>
+  </div>
+</nav>
+
+<div id="refresh-overlay" class="refresh-overlay" style="display:none">
+  <div class="refresh-overlay-card">
+    <canvas id="server-canvas" class="server-canvas"></canvas>
+    <div class="refresh-overlay-title">Fetching latest data…</div>
+    <div class="refresh-quote-wrap">
+      <div class="refresh-quote" id="refresh-quote"></div>
+      <div class="refresh-quote-author" id="refresh-quote-author"></div>
+    </div>
+    <div class="refresh-overlay-footer">
+      <span class="refresh-overlay-hint">Calling Yahoo Finance for each ticker…</span>
+      <span class="refresh-timer" id="refresh-timer">0s</span>
+    </div>
+  </div>
+</div>
+
+<div class="disclaimer" id="disclaimer-bar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="disc-icon"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span><strong>Not financial advice.</strong> Heuristic indicators on delayed/end-of-day data. Screening aid only — not a prediction of future price movement. Always do your own research.</span>
+  <button class="disc-close" onclick="dismissDisclaimer()" title="Dismiss">&#x2715;</button>
+</div>
+<script>
+  (function() {
+    if (sessionStorage.getItem('disc-dismissed')) {
+      document.getElementById('disclaimer-bar').style.display = 'none';
+    } else {
+      setTimeout(function() { dismissDisclaimer(); }, 10000);
+    }
+  })();
+  function dismissDisclaimer() {
+    var el = document.getElementById('disclaimer-bar');
+    if (!el) return;
+    el.style.transition = 'opacity 0.5s, max-height 0.5s, padding 0.5s, margin 0.5s';
+    el.style.opacity = '0';
+    el.style.maxHeight = '0';
+    el.style.padding = '0';
+    el.style.margin = '0';
+    el.style.overflow = 'hidden';
+    sessionStorage.setItem('disc-dismissed', '1');
+  }
+</script>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span>Data: Yahoo Finance (delayed/end-of-day)</span>
+  <span class="footer-dot">·</span>
+  <span>No real trades are executed by this app</span>
+</footer>
+
+<script>
+  // Sync the dropdown to whatever theme is active
+  (function() {
+    var t = localStorage.getItem('sr-theme') || 'dark';
+    var sel = document.getElementById('theme-select');
+    if (sel) sel.value = t;
+  })();
+
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('sr-theme', t);
+  }
+
+  var _quotes = [
+    { q: "The computer was born to solve problems that did not exist before.", a: "Bill Gates" },
+    { q: "Talk is cheap. Show me the code.", a: "Linus Torvalds" },
+    { q: "Any sufficiently advanced technology is indistinguishable from magic.", a: "Arthur C. Clarke" },
+    { q: "The best way to predict the future is to invent it.", a: "Alan Kay" },
+    { q: "First, solve the problem. Then, write the code.", a: "John Johnson" },
+    { q: "Programs must be written for people to read, and only incidentally for machines to execute.", a: "Harold Abelson" },
+    { q: "Make it work, make it right, make it fast.", a: "Kent Beck" },
+    { q: "The most disruptive thing you can do is solve a problem nobody thought was solvable.", a: "Steve Jobs" },
+    { q: "Code never lies. Comments sometimes do.", a: "Ron Fowler" },
+    { q: "The only way to go fast is to go well.", a: "Robert C. Martin" },
+    { q: "Simplicity is the ultimate sophistication.", a: "Leonardo da Vinci" },
+    { q: "It always seems impossible until it's done.", a: "Nelson Mandela" },
+    { q: "Move fast and break things. Unless you are breaking stuff, you are not moving fast enough.", a: "Mark Zuckerberg" },
+    { q: "The stock market is a device for transferring money from the impatient to the patient.", a: "Warren Buffett" },
+    { q: "In the short run, the market is a voting machine. In the long run, it is a weighing machine.", a: "Benjamin Graham" },
+    { q: "Risk comes from not knowing what you are doing.", a: "Warren Buffett" },
+    { q: "The four most dangerous words in investing are: 'This time it's different.'", a: "Sir John Templeton" },
+    { q: "Wide diversification is only required when investors do not understand what they are doing.", a: "Warren Buffett" },
+    { q: "The individual investor should act consistently as an investor and not as a speculator.", a: "Benjamin Graham" },
+    { q: "It's not whether you're right or wrong, but how much money you make when you're right.", a: "George Soros" },
+    { q: "The goal of a successful trader is to make the best trades. Money is secondary.", a: "Alexander Elder" },
+    { q: "Markets can remain irrational longer than you can remain solvent.", a: "John Maynard Keynes" },
+    { q: "An investment in knowledge pays the best interest.", a: "Benjamin Franklin" },
+    { q: "The best investment you can make is an investment in yourself.", a: "Warren Buffett" },
+    { q: "Price is what you pay. Value is what you get.", a: "Warren Buffett" },
+    { q: "Behind every stock is a company. Find out what it's doing.", a: "Peter Lynch" },
+    { q: "The time of maximum pessimism is the best time to buy.", a: "Sir John Templeton" },
+    { q: "Know what you own, and know why you own it.", a: "Peter Lynch" },
+    { q: "October. This is one of the peculiarly dangerous months to speculate in stocks.", a: "Mark Twain" },
+    { q: "A good decision is based on knowledge and not on numbers.", a: "Plato" },
+    { q: "Data is the new oil.", a: "Clive Humby" },
+    { q: "Without big data, you are blind and deaf in the middle of a freeway.", a: "Geoffrey Moore" },
+    { q: "Information is the oil of the 21st century, and analytics is the combustion engine.", a: "Peter Sondergaard" },
+    { q: "The goal is to turn data into information, and information into insight.", a: "Carly Fiorina" },
+    { q: "Numbers have an important story to tell. They rely on you to give them a voice.", a: "Stephen Few" },
+    { q: "Software is eating the world.", a: "Marc Andreessen" },
+    { q: "Every great engineer begins with the courage to begin.", a: "Sheryl Sandberg" },
+    { q: "Machines take me by surprise with great frequency.", a: "Alan Turing" },
+    { q: "A year from now you may wish you had started today.", a: "Karen Lamb" },
+    { q: "The secret of getting ahead is getting started.", a: "Mark Twain" },
+    { q: "Do not save what is left after spending, but spend what is left after saving.", a: "Warren Buffett" },
+    { q: "The real measure of your wealth is how much you'd be worth if you lost all your money.", a: "Unknown" },
+    { q: "Compound interest is the eighth wonder of the world.", a: "Albert Einstein" },
+    { q: "Someone's sitting in the shade today because someone planted a tree a long time ago.", a: "Warren Buffett" },
+    { q: "The market is not your mother. It consists of tough men and women who look for ways to take money away from you.", a: "Alexander Elder" },
+    { q: "Investing should be more like watching paint dry or watching grass grow. If you want excitement, take $800 and go to Las Vegas.", a: "Paul Samuelson" },
+    { q: "I will tell you how to become rich. Close the doors. Be fearful when others are greedy. Be greedy when others are fearful.", a: "Warren Buffett" },
+    { q: "The difference between a vision and a hallucination is how many people can see it.", a: "Peter Senge" },
+    { q: "Buy when everyone else is selling and hold when everyone else is buying.", a: "J. Paul Getty" },
+    { q: "The big money is not in the buying and the selling, but in the waiting.", a: "Charlie Munger" },
+    { q: "With enough data, the numbers speak for themselves.", a: "Chris Anderson" },
+  ];
+  // Infinite non-repeating shuffle: tracks last shown to avoid back-to-back repeats
+  (function() {
+    var _pool = [], _last = -1;
+    function _refill() {
+      _pool = _quotes.map(function(_, i){ return i; })
+                     .sort(function(){ return Math.random() - 0.5; });
+      if (_pool[0] === _last && _pool.length > 1) {
+        var t = _pool[0]; _pool[0] = _pool[1]; _pool[1] = t;
+      }
+    }
+    _refill();
+    window._nextQuote = function() {
+      if (!_pool.length) _refill();
+      _last = _pool.shift();
+      return _quotes[_last];
+    };
+  })();
+
+  function startRefresh(e) {
+    e.preventDefault(); // hold navigation until we have the count
+
+    var overlay = document.getElementById('refresh-overlay');
+    var timer   = document.getElementById('refresh-timer');
+    var qEl     = document.getElementById('refresh-quote');
+    var aEl     = document.getElementById('refresh-quote-author');
+    var canvas  = document.getElementById('server-canvas');
+    overlay.style.display = 'flex';
+
+    var stopAnim = initServerCanvas(canvas);
+
+    // Quotes
+    function showQuote() {
+      var item = window._nextQuote();
+      qEl.style.opacity = '0'; aEl.style.opacity = '0';
+      setTimeout(function() {
+        qEl.textContent = '”' + item.q + '”';
+        aEl.textContent = '— ' + item.a;
+        qEl.style.opacity = '1'; aEl.style.opacity = '1';
+      }, 400);
+    }
+    showQuote();
+    var quoteInterval = setInterval(showQuote, 12000);
+
+    var start = Date.now();
+    var tickInterval = setInterval(function() {
+      timer.textContent = Math.floor((Date.now() - start) / 1000) + 's';
+    }, 1000);
+
+    window._refreshCleanup = function() {
+      clearInterval(quoteInterval);
+      clearInterval(tickInterval);
+      stopAnim();
+    };
+
+    window.location.href = '/refresh';
+  }
+
+  function startRebuild(e) {
+    e.preventDefault();
+    var priceInput = document.getElementById('rebuild-price-input');
+    var maxPrice   = priceInput ? parseFloat(priceInput.value) : NaN;
+    if (!maxPrice || maxPrice <= 0) {
+      alert('Please enter a max share price (e.g. 100).');
+      return;
+    }
+    if (!confirm('This will replace your entire watchlist. Continue?')) return;
+
+    var overlay = document.getElementById('refresh-overlay');
+    var titleEl = overlay.querySelector('.refresh-overlay-title');
+    var hintEl  = overlay.querySelector('.refresh-overlay-hint');
+    var timer   = document.getElementById('refresh-timer');
+    var qEl     = document.getElementById('refresh-quote');
+    var aEl     = document.getElementById('refresh-quote-author');
+    var canvas  = document.getElementById('server-canvas');
+
+    if (titleEl) titleEl.textContent = 'Rebuilding watchlist…';
+    if (hintEl)  hintEl.textContent  = 'Scoring universe stocks from Yahoo Finance…';
+    overlay.style.display = 'flex';
+
+    var stopAnim = initServerCanvas(canvas);
+
+    var deck = _quotes.slice().sort(function() { return Math.random() - 0.5; });
+    var qi = 0;
+    function showQuote(idx) {
+      var item = deck[idx % deck.length];
+      qEl.style.opacity = '0'; aEl.style.opacity = '0';
+      setTimeout(function() {
+        qEl.textContent = '"' + item.q + '"';
+        aEl.textContent = '— ' + item.a;
+        qEl.style.opacity = '1'; aEl.style.opacity = '1';
+      }, 400);
+    }
+    showQuote(0);
+    var quoteInterval = setInterval(function() { showQuote(++qi); }, 12000);
+
+    var start = Date.now();
+    var tickInterval = setInterval(function() {
+      timer.textContent = Math.floor((Date.now() - start) / 1000) + 's';
+    }, 1000);
+
+    window._refreshCleanup = function() {
+      clearInterval(quoteInterval);
+      clearInterval(tickInterval);
+      stopAnim();
+    };
+
+    window.location.href = '/settings/watchlist/rebuild?max_price=' + maxPrice;
+  }
+</script>
+
+</body>
+</html>

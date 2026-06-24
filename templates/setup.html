@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup — StockResearcher</title>
+  <link rel="stylesheet" href="/static/style.css?v=11">
+  <script>(function(){ var t=localStorage.getItem('sr-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+        <polyline points="16 7 22 7 22 13"></polyline>
+      </svg>
+      StockResearcher
+    </div>
+    <h1 class="auth-title">Create your account</h1>
+    <p class="auth-subtitle">First-time setup. These credentials are stored locally on this machine only.</p>
+    {% if error %}
+    <div class="auth-error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/setup" class="auth-form">
+      <label class="auth-label">Username</label>
+      <input type="text" name="username" class="auth-input" autocomplete="username" autofocus required>
+      <label class="auth-label">Password <span class="auth-hint">(min 6 characters)</span></label>
+      <input type="password" name="password" class="auth-input" autocomplete="new-password" required>
+      <label class="auth-label">Confirm password</label>
+      <input type="password" name="confirm" class="auth-input" autocomplete="new-password" required>
+      <button type="submit" class="btn auth-btn">Create account</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

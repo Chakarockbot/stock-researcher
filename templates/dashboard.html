@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — StockResearcher{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Candidate Dashboard</h1>
+    <p class="subtext">
+      Screening {{ watchlist_count }} stocks &nbsp;&bull;&nbsp;
+      Last updated: <strong>{{ last_updated }}</strong> &nbsp;&bull;&nbsp;
+      Account: <strong>${{ "%.2f"|format(account_size) }}</strong>
+    </p>
+  </div>
+</div>
+
+{# ---- Triggered alert banner ---- #}
+{% if triggered_alerts %}
+<div class="alert-banner">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  <div>
+    <strong>Price alert{{ "s" if triggered_alerts|length > 1 else "" }} triggered:</strong>
+    {% for a in triggered_alerts %}
+      <span class="alert-item">
+        <strong>{{ a.ticker }}</strong> hit ${{ "%.2f"|format(a.current_price) }}
+        (your target: {{ a.direction }} ${{ "%.2f"|format(a.target_price) }})
+      </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="score-legend card">
+  <strong>How to read this table:</strong>
+  The <em>Score</em> (0–100) is a weighted average of four technical signals.
+  Higher = stronger short-term buy signal <em>right now</em>.
+  It is not a prediction — use it as a starting point for your own research.
+  Click any row for the full indicator breakdown.
+  The <em>delta badge</em> (e.g. ↑3) shows rank change since your last data refresh.
+</div>
+
+{# ---- Filter bar ---- #}
+<div class="filter-bar card">
+  <div class="filter-group filter-group-price">
+    <label class="filter-label" for="max-price-input">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Max Share Price
+    </label>
+    <div class="price-filter-row">
+      <div class="price-input-wrap">
+        <span class="price-prefix">$</span>
+        <input type="number" id="max-price-input" min="1" step="1"
+               value="" placeholder="any price" oninput="applyFilters()" class="price-filter-input">
+      </div>
+      <button class="price-clear-btn" onclick="clearPriceFilter()" title="Show all prices">✕ Clear</button>
+    </div>
+    <span class="filter-hint">Only show stocks at or below this price (whole share)</span>
+  </div>
+</div>
+
+{# ---- Sector filter ---- #}
+{% if sectors %}
+<div class="sector-filters">
+  <button class="sector-btn active" onclick="setSector('all', this)">All</button>
+  {% for s in sectors %}
+  <button class="sector-btn" onclick="setSector('{{ s }}', this)">{{ s }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if results %}
+<div class="table-wrap">
+<table class="candidates" id="candidates-table">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Ticker</th>
+      <th>Name</th>
+      <th>Sector</th>
+      <th>Price</th>
+      <th title="Weighted composite of RSI, MA crossover, momentum, relative volume">Score</th>
+      <th title="Market capitalization — total market value of all shares outstanding">Mkt Cap</th>
+      <th title="Relative Strength Index — oversold/overbought meter (0–100). Below 40 = potentially oversold.">RSI</th>
+      <th title="% gap between 20-day and 50-day moving average. Positive = short-term trend beating medium-term.">MA Gap</th>
+      <th title="Price change over last 20 trading days.">20d Mom</th>
+      <th title="Today's volume vs 20-day average. Above 1.5× = elevated activity.">Rel Vol</th>
+      <th>Flags</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr class="candidate-row"
+        data-sector="{{ r.sector }}"
+        data-price="{{ r.current_price }}"
+        data-cap="{{ r.market_cap_b if r.market_cap_b else 99999 }}"
+        onclick="window.location='/stock/{{ r.ticker }}'">
+      <td class="rank">#{{ loop.index }}</td>
+      <td class="ticker-cell">
+        <strong>{{ r.ticker }}</strong>
+        {% set delta = deltas.get(r.ticker, "") %}
+        {% if delta == "new" %}
+          <span class="delta-badge delta-new">new</span>
+        {% elif delta.startswith("+") %}
+          <span class="delta-badge delta-up">&#8593;{{ delta[1:] }}</span>
+        {% elif delta.startswith("-") %}
+          <span class="delta-badge delta-down">&#8595;{{ delta[1:] }}</span>
+        {% endif %}
+      </td>
+      <td class="name-col">{{ r.name }}</td>
+      <td><span class="sector-tag">{{ r.sector }}</span></td>
+      <td>${{ "%.2f"|format(r.current_price) }}</td>
+      <td>
+        <div class="score-wrap">
+          <div class="score-bar">
+            <div class="score-fill
+              {% if r.score >= 60 %}score-high
+              {% elif r.score >= 40 %}score-mid
+              {% else %}score-low{% endif %}"
+              style="width: {{ r.score }}%"></div>
+          </div>
+          <span class="score-num">{{ r.score }}</span>
+        </div>
+      </td>
+      <td class="mktcap-col">
+        {% if r.market_cap_b %}
+          {% if r.market_cap_b >= 1000 %}${{ "%.1f"|format(r.market_cap_b / 1000) }}T
+          {% elif r.market_cap_b >= 1 %}${{ "%.1f"|format(r.market_cap_b) }}B
+          {% else %}${{ "%.0f"|format(r.market_cap_b * 1000) }}M
+          {% endif %}
+        {% else %}—{% endif %}
+      </td>
+      <td class="{% if r.indicators.rsi.value and r.indicators.rsi.value < 40 %}cell-good{% elif r.indicators.rsi.value and r.indicators.rsi.value > 70 %}cell-warn{% endif %}">
+        {{ "%.1f"|format(r.indicators.rsi.value) if r.indicators.rsi.value else "—" }}
+      </td>
+      <td class="{% if r.indicators.ma_crossover.value and r.indicators.ma_crossover.value > 1 %}cell-good{% elif r.indicators.ma_crossover.value and r.indicators.ma_crossover.value < -1 %}cell-warn{% endif %}">
+        {{ "%+.1f%%"|format(r.indicators.ma_crossover.value) if r.indicators.ma_crossover.value else "—" }}
+      </td>
+      <td class="{% if r.indicators.momentum.value and r.indicators.momentum.value > 0 %}cell-good{% elif r.indicators.momentum.value and r.indicators.momentum.value < -5 %}cell-warn{% endif %}">
+        {{ "%+.1f%%"|format(r.indicators.momentum.value) if r.indicators.momentum.value else "—" }}
+      </td>
+      <td>{{ "%.2f"|format(r.indicators.relative_volume.value) if r.indicators.relative_volume.value else "—" }}x</td>
+      <td>
+        <div class="flags-cell">
+          {% for f in r.risk_flags %}
+            <span class="flag flag-{{ f.severity }}" title="{{ f.detail }}">{{ f.flag }}</span>
+          {% endfor %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="table-hint">Click any row to see the full indicator breakdown and log a paper trade.</p>
+
+{% else %}
+<div class="empty-state">
+  <p>No data yet. <a href="/refresh">Click Refresh Data to fetch scores for the first time.</a></p>
+</div>
+{% endif %}
+
+<script>
+var _activeSector = 'all';
+
+function setSector(sector, btn) {
+  _activeSector = sector;
+  document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function clearPriceFilter() {
+  document.getElementById('max-price-input').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  var rawVal  = document.getElementById('max-price-input').value;
+  var maxPrice = rawVal === '' ? Infinity : parseFloat(rawVal);
+
+  document.querySelectorAll('#candidates-table .candidate-row').forEach(function(row) {
+    var price    = parseFloat(row.dataset.price);
+    var sec      = row.dataset.sector;
+    var priceOk  = price <= maxPrice;
+    var sectorOk = (_activeSector === 'all') || (sec === _activeSector);
+    row.style.display = (priceOk && sectorOk) ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

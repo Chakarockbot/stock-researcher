@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Settings — StockResearcher{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Settings</h1>
+    <p class="subtext">Manage your watchlist. Changes take effect on the next dashboard load.</p>
+  </div>
+</div>
+
+{% if error %}
+<div class="inline-banner inline-banner-error">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  {{ error }}
+</div>
+{% endif %}
+
+{% if success %}
+<div class="inline-banner inline-banner-success">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+  {{ success }}
+</div>
+{% endif %}
+
+<div class="settings-grid">
+
+  <!-- Add ticker -->
+  <div class="card">
+    <h2>Add a Ticker</h2>
+    <p class="subtext" style="margin-bottom:14px">
+      Enter any valid US stock ticker symbol. The app will validate it against
+      Yahoo Finance before adding — if the symbol isn't found, it won't be added.
+    </p>
+    <form method="post" action="/settings/watchlist/add" class="add-ticker-form">
+      <div class="add-ticker-row">
+        <input type="text" name="ticker" placeholder="e.g. COST" required
+               style="text-transform:uppercase; max-width:140px"
+               autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add to Watchlist
+        </button>
+      </div>
+      <p class="subtext">Note: adding a ticker fetches its data immediately, which may take a few seconds.</p>
+    </form>
+  </div>
+
+  <!-- Replace watchlist by price -->
+  <div class="card">
+    <h2>Rebuild Watchlist by Price</h2>
+    <p class="subtext" style="margin-bottom:14px">
+      Enter your max share price and hit Rebuild. The app scores all <strong>{{ universe_count }}</strong> stocks
+      in its built-in universe — fetching any that aren't cached yet — then fills your 100-stock watchlist
+      with the best-scoring stocks at or below that price. If there aren't enough, it tops off with the
+      highest-rated picks overall.
+    </p>
+    <p class="subtext" style="margin-bottom:14px">
+      This may take a minute or two the first time (same as Refresh Data). Future rebuilds are fast since
+      prices are already cached.
+    </p>
+    <div class="add-ticker-form">
+      <p class="subtext" style="margin-bottom:10px">
+        What's the most you'd pay for a single share?
+      </p>
+      <div class="add-ticker-row">
+        <div class="price-input-wrap">
+          <span class="price-prefix">$</span>
+          <input type="number" id="rebuild-price-input" min="1" step="1"
+                 placeholder="100" class="price-filter-input" style="width:100px">
+        </div>
+        <button class="btn btn-replace" onclick="startRebuild(event)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Rebuild Watchlist
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change password -->
+  <div class="card">
+    <h2>Change Password</h2>
+    <p class="subtext" style="margin-bottom:14px">Update your login credentials. You'll stay signed in after changing.</p>
+    <form method="post" action="/settings/change-password" class="add-ticker-form">
+      <div style="display:flex; flex-direction:column; gap:10px; max-width:320px">
+        <input type="password" name="current" placeholder="Current password" class="auth-input" required>
+        <input type="password" name="new_password" placeholder="New password (min 6 chars)" class="auth-input" required>
+        <input type="password" name="confirm" placeholder="Confirm new password" class="auth-input" required>
+        <button type="submit" class="btn" style="align-self:flex-start">Update Password</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Current watchlist -->
+  <div class="card">
+    <h2>Current Watchlist <span class="count-badge">{{ watchlist|length }}</span></h2>
+    <div class="ticker-grid">
+      {% for ticker in watchlist | sort %}
+      <div class="ticker-chip">
+        <a href="/stock/{{ ticker }}">{{ ticker }}</a>
+        <form method="post" action="/settings/watchlist/remove" class="remove-form"
+              onsubmit="return confirm('Remove {{ ticker }} from your watchlist?')">
+          <input type="hidden" name="ticker" value="{{ ticker }}">
+          <button type="submit" class="remove-btn" title="Remove {{ ticker }}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

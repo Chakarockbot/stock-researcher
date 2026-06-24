@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}{{ result.ticker }} — StockResearcher{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <a href="/" class="back-link">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Dashboard
+    </a>
+    <h1>{{ result.ticker }} &nbsp;<span class="name-sub">{{ result.name }}</span></h1>
+    <p class="subtext">{{ result.sector }} &nbsp;&bull;&nbsp; ${{ "%.2f"|format(result.current_price) }} per share</p>
+  </div>
+  <div class="score-hero {% if result.score >= 60 %}score-hero-high{% elif result.score >= 40 %}score-hero-mid{% else %}score-hero-low{% endif %}">
+    <div class="score-hero-num">{{ result.score }}</div>
+    <div class="score-hero-label">/ 100</div>
+  </div>
+</div>
+
+{% if result.risk_flags %}
+<div class="flags-banner">
+  <strong>Risk flags:</strong>
+  {% for f in result.risk_flags %}
+  <div class="flag-detail flag-{{ f.severity }}">
+    <span class="flag-name">{{ f.flag }}</span> — {{ f.detail }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ---- Price chart ---- #}
+{% if chart_dates %}
+<div class="card chart-card">
+  <h2>Price History (last 60 days)</h2>
+  <canvas id="priceChart" height="120"></canvas>
+</div>
+{% endif %}
+
+{# ---- Indicator breakdown ---- #}
+<div class="card">
+  <h2>Indicator Breakdown</h2>
+  <p class="subtext" style="margin-bottom:16px">Each bar shows how strongly that indicator is signaling a buy right now (100 = strongest signal).</p>
+  {% for key, i in result.indicators.items() %}
+  <div class="indicator-row">
+    <div class="indicator-header">
+      <span class="indicator-label">{{ i.label }}</span>
+      <span class="indicator-score-num">{{ (i.score * 100)|round|int }}/100</span>
+    </div>
+    <div class="indicator-bar-wrap">
+      <div class="indicator-bar {% if i.score >= 0.6 %}ind-high{% elif i.score >= 0.35 %}ind-mid{% else %}ind-low{% endif %}"
+           style="width: {{ (i.score * 100)|round|int }}%"></div>
+    </div>
+    <p class="indicator-interp">{{ i.interpretation }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+{# ---- Position sizing ---- #}
+<div class="card">
+  <h2>Position Sizing</h2>
+  <p style="margin-bottom:12px">{{ result.sizing.note }}</p>
+  <table class="sizing-table">
+    <tr><td>Current price</td><td><strong>${{ "%.2f"|format(result.current_price) }}</strong></td></tr>
+    <tr><td>Max position (20% of account)</td><td><strong>${{ "%.2f"|format(result.sizing.max_position_dollars) }}</strong></td></tr>
+    <tr><td>Max shares at this price</td><td><strong>{{ "%.4f"|format(result.sizing.max_shares) }}</strong></td></tr>
+  </table>
+</div>
+
+{# ---- Price alerts ---- #}
+<div class="card">
+  <h2>Price Alerts</h2>
+  <p class="subtext" style="margin-bottom:14px">
+    Get notified on the dashboard when this stock crosses a price you set.
+    Alerts are checked every time you load the dashboard.
+  </p>
+
+  <form method="post" action="/alerts/add" class="trade-form">
+    <input type="hidden" name="redirect_to" value="/stock/{{ result.ticker }}">
+    <input type="hidden" name="ticker" value="{{ result.ticker }}">
+    <div class="form-row">
+      <label>Alert me when price is
+        <select name="direction" class="form-select">
+          <option value="below">Below (drops to)</option>
+          <option value="above">Above (rises to)</option>
+        </select>
+      </label>
+      <label>Target price ($)
+        <input type="number" name="target_price" step="0.01" min="0.01" required
+               placeholder="{{ "%.2f"|format(result.current_price) }}">
+      </label>
+    </div>
+    <button type="submit" class="btn">Set Alert</button>
+  </form>
+
+  {% if active_alerts %}
+  <div style="margin-top:18px">
+    <p class="subtext" style="margin-bottom:10px"><strong>Active alerts for {{ result.ticker }}:</strong></p>
+    <div class="active-alerts-list">
+      {% for a in active_alerts %}
+      <div class="active-alert-row">
+        <span>
+          Notify when price goes <strong>{{ a.direction }}</strong>
+          <strong>${{ "%.2f"|format(a.target_price) }}</strong>
+          <span class="subtext">(current: ${{ "%.2f"|format(result.current_price) }})</span>
+        </span>
+        <form method="post" action="/alerts/delete/{{ a.id }}" class="inline-form">
+          <input type="hidden" name="redirect_to" value="/stock/{{ result.ticker }}">
+          <button type="submit" class="btn btn-sm btn-delete">Remove</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ---- Log a paper trade ---- #}
+<div class="card">
+  <h2>Log a Paper Trade</h2>
+  <p class="subtext" style="margin-bottom:14px">Record a hypothetical buy to track whether this pick plays out. No real money moves.</p>
+  <form method="post" action="/trades/add" class="trade-form">
+    <input type="hidden" name="ticker" value="{{ result.ticker }}">
+    <div class="form-row">
+      <label>Shares
+        <input type="number" name="shares" step="0.0001" min="0.0001" required placeholder="e.g. 0.25">
+      </label>
+      <label>Price paid per share ($)
+        <input type="number" name="price_open" step="0.01" min="0.01" required value="{{ "%.2f"|format(result.current_price) }}">
+      </label>
+      <label>Date
+        <input type="date" name="date_opened" required value="{{ today }}">
+      </label>
+    </div>
+    <label>Notes (optional)
+      <input type="text" name="notes" placeholder="e.g. MA crossover signal, RSI 38">
+    </label>
+    <button type="submit" class="btn">Log Paper Buy</button>
+  </form>
+</div>
+
+{# ---- Open paper positions ---- #}
+{% if open_trades %}
+<div class="card">
+  <h2>Open Paper Positions in {{ result.ticker }}</h2>
+  <table class="trades-table">
+    <thead>
+      <tr><th>Opened</th><th>Shares</th><th>Entry</th><th>Current</th><th>P&amp;L</th><th>Notes</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for t in open_trades %}
+      <tr>
+        <td>{{ t.date_opened }}</td>
+        <td>{{ t.shares }}</td>
+        <td>${{ "%.2f"|format(t.price_open) }}</td>
+        <td>${{ "%.2f"|format(t.current_price) if t.current_price else "—" }}</td>
+        <td class="{% if t.pnl is not none and t.pnl >= 0 %}cell-good{% elif t.pnl is not none %}cell-warn{% endif %}">
+          {% if t.pnl is not none %}${{ "%+.2f"|format(t.pnl) }} ({{ "%+.1f%%"|format(t.pnl_pct) }}){% else %}—{% endif %}
+        </td>
+        <td>{{ t.notes or "—" }}</td>
+        <td>
+          <form method="post" action="/trades/close/{{ t.id }}" class="inline-form">
+            <input type="number" name="price_close" step="0.01" min="0.01" placeholder="Exit $" required style="width:80px">
+            <input type="date" name="date_closed" required value="{{ today }}" style="width:130px">
+            <button type="submit" class="btn btn-sm btn-close">Close</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ---- Chart script ---- #}
+{% if chart_dates %}
+<script>
+(function() {
+  const dates  = {{ chart_dates | tojson }};
+  const prices = {{ chart_prices | tojson }};
+  const ma20   = {{ chart_ma20 | tojson }};
+  const ma50   = {{ chart_ma50 | tojson }};
+
+  const canvas = document.getElementById("priceChart");
+  const W = canvas.offsetWidth; const H = canvas.offsetHeight;
+  canvas.width = W; canvas.height = H;
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 58 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const allVals = prices.concat(ma20.filter(v=>v!==null), ma50.filter(v=>v!==null));
+  const minV = Math.min(...allVals)*0.995, maxV = Math.max(...allVals)*1.005;
+
+  const xPos = i  => pad.left + (i/(dates.length-1))*cW;
+  const yPos = v  => pad.top + cH - ((v-minV)/(maxV-minV))*cH;
+
+  const style = getComputedStyle(document.documentElement);
+  const colorBorder  = style.getPropertyValue('--border').trim()   || '#2d3148';
+  const colorSub     = style.getPropertyValue('--text-sub').trim() || '#7c8db0';
+  const colorAccent  = style.getPropertyValue('--accent').trim()   || '#7c88ff';
+  const colorAmber   = style.getPropertyValue('--amber').trim()    || '#fbbf24';
+  const colorText    = style.getPropertyValue('--text').trim()     || '#e2e8f0';
+
+  const ctx = canvas.getContext("2d");
+
+  // Grid
+  ctx.strokeStyle = colorBorder; ctx.lineWidth = 1;
+  for (let i=0; i<=4; i++) {
+    const y = pad.top + (i/4)*cH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cW, y); ctx.stroke();
+    const val = maxV-(i/4)*(maxV-minV);
+    ctx.fillStyle = colorSub; ctx.font="11px sans-serif"; ctx.textAlign="right";
+    ctx.fillText("$"+val.toFixed(0), pad.left-6, y+4);
+  }
+
+  // X labels
+  ctx.fillStyle = colorSub; ctx.textAlign="center";
+  const step = Math.max(1, Math.floor(dates.length/6));
+  for (let i=0; i<dates.length; i+=step) ctx.fillText(dates[i], xPos(i), H-6);
+
+  function drawLine(data, color, width, dashed) {
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=width;
+    ctx.setLineDash(dashed ? [5,3] : []);
+    let started=false;
+    for (let i=0; i<data.length; i++) {
+      if (data[i]===null){started=false;continue;}
+      if (!started){ctx.moveTo(xPos(i),yPos(data[i]));started=true;}
+      else ctx.lineTo(xPos(i),yPos(data[i]));
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  drawLine(ma50,   colorAmber,  1.5, true);
+  drawLine(ma20,   colorAccent, 1.5, true);
+  drawLine(prices, colorAccent, 2,   false);
+
+  // Legend
+  const items = [
+    {label:"Price", color:colorAccent, dashed:false},
+    {label:"20d MA", color:colorAccent, dashed:true},
+    {label:"50d MA", color:colorAmber, dashed:true},
+  ];
+  let lx = pad.left+10;
+  items.forEach(item => {
+    ctx.strokeStyle=item.color; ctx.lineWidth=2;
+    ctx.setLineDash(item.dashed?[4,3]:[]);
+    ctx.beginPath(); ctx.moveTo(lx, pad.top+10); ctx.lineTo(lx+20, pad.top+10); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=colorText; ctx.font="11px sans-serif"; ctx.textAlign="left";
+    ctx.fillText(item.label, lx+24, pad.top+14);
+    lx+=80;
+  });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

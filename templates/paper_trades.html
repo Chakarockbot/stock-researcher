@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Paper Trades — StockResearcher{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Paper Trade Log</h1>
+    <p class="subtext">Hypothetical positions only — no real money moves here.</p>
+  </div>
+</div>
+
+<!-- Summary bar -->
+<div class="summary-bar">
+  <div class="summary-stat">
+    <span class="summary-label">Open positions</span>
+    <span class="summary-val">{{ open_trades|length }}</span>
+  </div>
+  <div class="summary-stat">
+    <span class="summary-label">Capital deployed</span>
+    <span class="summary-val">${{ "%.2f"|format(total_open_cost) }}</span>
+  </div>
+  <div class="summary-stat">
+    <span class="summary-label">Unrealized P&amp;L</span>
+    <span class="summary-val {% if total_unrealized >= 0 %}cell-good{% else %}cell-warn{% endif %}">
+      ${{ "%+.2f"|format(total_unrealized) }}
+    </span>
+  </div>
+  <div class="summary-stat">
+    <span class="summary-label">Realized P&amp;L (closed)</span>
+    <span class="summary-val {% if total_realized >= 0 %}cell-good{% else %}cell-warn{% endif %}">
+      ${{ "%+.2f"|format(total_realized) }}
+    </span>
+  </div>
+</div>
+
+<!-- Add new trade form -->
+<div class="card">
+  <h2>Log a New Paper Buy</h2>
+  <form method="post" action="/trades/add" class="trade-form">
+    <div class="form-row">
+      <label>Ticker
+        <input type="text" name="ticker" required placeholder="e.g. AAPL" list="watchlist-tickers"
+               style="text-transform:uppercase">
+        <datalist id="watchlist-tickers">
+          {% for t in watchlist %}<option value="{{ t }}">{% endfor %}
+        </datalist>
+      </label>
+      <label>Shares
+        <input type="number" name="shares" step="0.0001" min="0.0001" required placeholder="e.g. 0.5">
+      </label>
+      <label>Price paid ($)
+        <input type="number" name="price_open" step="0.01" min="0.01" required placeholder="e.g. 145.00">
+      </label>
+      <label>Date
+        <input type="date" name="date_opened" required value="{{ today }}">
+      </label>
+    </div>
+    <label>Notes (optional)
+      <input type="text" name="notes" placeholder="e.g. RSI 36, MA crossover signal">
+    </label>
+    <button type="submit" class="btn">Log Paper Buy</button>
+  </form>
+</div>
+
+<!-- Open positions -->
+<div class="card">
+  <h2>Open Positions</h2>
+  {% if open_trades %}
+  <table class="trades-table">
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Opened</th><th>Shares</th>
+        <th>Entry</th><th>Current</th><th>Cost Basis</th>
+        <th>Unrealized P&amp;L</th><th>Notes</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in open_trades %}
+      <tr>
+        <td><a href="/stock/{{ t.ticker }}"><strong>{{ t.ticker }}</strong></a></td>
+        <td>{{ t.date_opened }}</td>
+        <td>{{ t.shares }}</td>
+        <td>${{ "%.2f"|format(t.price_open) }}</td>
+        <td>${{ "%.2f"|format(t.current_price) if t.current_price else "—" }}</td>
+        <td>${{ "%.2f"|format(t.cost_basis) }}</td>
+        <td class="{% if t.pnl is not none and t.pnl >= 0 %}cell-good{% elif t.pnl is not none %}cell-warn{% endif %}">
+          {% if t.pnl is not none %}
+            ${{ "%+.2f"|format(t.pnl) }}<br>
+            <small>{{ "%+.1f%%"|format(t.pnl_pct) }}</small>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ t.notes or "—" }}</td>
+        <td>
+          <form method="post" action="/trades/close/{{ t.id }}" class="inline-form">
+            <input type="number" name="price_close" step="0.01" min="0.01"
+                   placeholder="Exit $" required style="width:80px">
+            <input type="date" name="date_closed" required value="{{ today }}" style="width:130px">
+            <button type="submit" class="btn btn-sm btn-close">Close</button>
+          </form>
+          <form method="post" action="/trades/delete/{{ t.id }}" class="inline-form"
+                onsubmit="return confirm('Delete this trade log?')">
+            <button type="submit" class="btn btn-sm btn-delete">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state-inline">No open positions yet. Log a paper buy above or from any stock's detail page.</p>
+  {% endif %}
+</div>
+
+<!-- Closed positions -->
+{% if closed_trades %}
+<div class="card">
+  <h2>Closed Positions</h2>
+  <table class="trades-table">
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Opened</th><th>Closed</th><th>Shares</th>
+        <th>Entry</th><th>Exit</th><th>Realized P&amp;L</th><th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in closed_trades %}
+      <tr>
+        <td><a href="/stock/{{ t.ticker }}"><strong>{{ t.ticker }}</strong></a></td>
+        <td>{{ t.date_opened }}</td>
+        <td>{{ t.date_closed }}</td>
+        <td>{{ t.shares }}</td>
+        <td>${{ "%.2f"|format(t.price_open) }}</td>
+        <td>${{ "%.2f"|format(t.price_close) }}</td>
+        <td class="{% if t.pnl is not none and t.pnl >= 0 %}cell-good{% elif t.pnl is not none %}cell-warn{% endif %}">
+          {% if t.pnl is not none %}
+            ${{ "%+.2f"|format(t.pnl) }} ({{ "%+.1f%%"|format(t.pnl_pct) }})
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ t.notes or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

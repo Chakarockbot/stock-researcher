@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Glossary — StockResearcher{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Glossary</h1>
+    <p class="subtext">Plain-English definitions for every term used in this app.</p>
+  </div>
+</div>
+
+<div class="glossary-search-wrap">
+  <input type="text" id="gloss-search" placeholder="Search terms..." oninput="filterGloss(this.value)" class="gloss-search-input">
+</div>
+
+<div class="glossary-grid" id="glossary-grid">
+
+  {# ---- Scoring indicators ---- #}
+  <section class="gloss-section">
+    <h2 class="gloss-section-title">Scoring Indicators</h2>
+
+    <div class="gloss-card" data-terms="score composite weighted">
+      <div class="gloss-term">Score <span class="gloss-range">0 – 100</span></div>
+      <div class="gloss-def">
+        The app's overall buy-signal strength for a stock right now. It is a weighted average
+        of four technical indicators (RSI, MA Crossover, Momentum, Relative Volume), each
+        converted to a 0–100 sub-score and combined. <strong>Higher = stronger signal.</strong>
+        It is not a price prediction — use it as a first-pass filter, then do your own research.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="rsi relative strength index oversold overbought momentum oscillator">
+      <div class="gloss-term">RSI <span class="gloss-abbr">Relative Strength Index</span></div>
+      <div class="gloss-def">
+        A number from 0 to 100 that measures how fast a stock has been moving recently
+        compared to its own history.
+        <ul class="gloss-list">
+          <li><strong>Below 30</strong> — often considered <em>oversold</em>: the stock may have fallen too far, too fast, and could bounce.</li>
+          <li><strong>Above 70</strong> — often considered <em>overbought</em>: the stock may have risen too far, too fast.</li>
+          <li><strong>40–60</strong> — neutral zone.</li>
+        </ul>
+        This app scores RSI highest when it is below 40 (potential buying opportunity) and flags it
+        as a risk when it is above 70.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="ma crossover moving average 20 50 day sma golden cross">
+      <div class="gloss-term">MA Crossover <span class="gloss-abbr">Moving Average Gap</span></div>
+      <div class="gloss-def">
+        Compares the stock's 20-day simple moving average (SMA) to its 50-day SMA and shows
+        the percentage gap between them.
+        <ul class="gloss-list">
+          <li><strong>Positive %</strong> — the short-term average is above the medium-term average, meaning recent price action is trending up.</li>
+          <li><strong>Negative %</strong> — recent trend is below the medium-term, a bearish sign.</li>
+        </ul>
+        A 20-day crossing above the 50-day is sometimes called a <em>Golden Cross</em> — a classic bullish signal.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="momentum 20 day price change percent">
+      <div class="gloss-term">20d Momentum</div>
+      <div class="gloss-def">
+        The percentage price change over the last 20 trading days (roughly one calendar month).
+        Positive momentum means the stock has been climbing; negative means it has been falling.
+        This app uses it as a trend-confirmation signal — rising stocks tend to keep rising in
+        the short term, and vice versa.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="relative volume rvol unusual activity volume spike">
+      <div class="gloss-term">Rel Vol <span class="gloss-abbr">Relative Volume</span></div>
+      <div class="gloss-def">
+        Today's trading volume divided by the 20-day average daily volume.
+        <ul class="gloss-list">
+          <li><strong>1.0×</strong> — normal activity.</li>
+          <li><strong>1.5× or higher</strong> — elevated — more traders than usual are buying or selling, which can amplify price moves.</li>
+          <li><strong>Below 0.5×</strong> — quiet day; signals may be less reliable.</li>
+        </ul>
+        High relative volume often accompanies breakouts or news events.
+      </div>
+    </div>
+  </section>
+
+  {# ---- Risk flags ---- #}
+  <section class="gloss-section">
+    <h2 class="gloss-section-title">Risk Flags</h2>
+
+    <div class="gloss-card" data-terms="low liquidity dollar volume illiquid">
+      <div class="gloss-term">Low Liquidity</div>
+      <div class="gloss-def">
+        The stock trades less than $1 million of shares per day on average. Low-liquidity stocks
+        are harder to buy and sell without moving the price yourself, and bid-ask spreads tend
+        to be wider — meaning you pay more to enter and get less when you exit.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="high share price fractional expensive">
+      <div class="gloss-term">High Share Price</div>
+      <div class="gloss-def">
+        The current share price is above $50. With a $100 account you can only buy one whole
+        share (or less) before using half your capital. This flag is a reminder to check whether
+        your broker supports fractional shares (Robinhood does).
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="overbought rsi 70 extended rally">
+      <div class="gloss-term">Overbought</div>
+      <div class="gloss-def">
+        The RSI is above 70, meaning the stock has risen sharply in a short time and may be
+        "due for a pullback." It does not mean it will fall — strong stocks can stay overbought
+        for a long time — but it does mean you are buying at a point of elevated momentum, not
+        at a discount.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="high volatility std dev annualized risk">
+      <div class="gloss-term">High Volatility</div>
+      <div class="gloss-def">
+        The stock's 20-day annualized standard deviation of daily returns puts it in the top
+        25% of the watchlist. Higher volatility means larger daily price swings — which amplifies
+        both gains and losses. With a small account, a single bad day can wipe out a meaningful
+        percentage of your position.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="earnings date report upcoming surprise">
+      <div class="gloss-term">Earnings Soon</div>
+      <div class="gloss-def">
+        The company is scheduled to report quarterly earnings within the next 14 days. Earnings
+        reports often cause large, unpredictable price gaps — the stock can jump 10% up or down
+        overnight. Buying just before earnings is closer to a coin-flip than a technical trade.
+      </div>
+    </div>
+  </section>
+
+  {# ---- Market cap ---- #}
+  <section class="gloss-section">
+    <h2 class="gloss-section-title">Market Cap &amp; Size</h2>
+
+    <div class="gloss-card" data-terms="market cap capitalization total value shares outstanding">
+      <div class="gloss-term">Market Cap <span class="gloss-abbr">Market Capitalization</span></div>
+      <div class="gloss-def">
+        The total market value of a company's outstanding shares: <em>share price × total shares</em>.
+        It tells you the company's overall size as the market currently values it — not the same
+        as revenue or profit.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="micro small mid large mega cap size category">
+      <div class="gloss-term">Cap Size Categories</div>
+      <div class="gloss-def">
+        <ul class="gloss-list">
+          <li><strong>Micro-cap</strong> — under $300 million. High risk, high potential volatility, often less analyst coverage.</li>
+          <li><strong>Small-cap</strong> — $300 million to $2 billion. More growth potential than large caps, but less stable.</li>
+          <li><strong>Mid-cap</strong> — $2 billion to $10 billion. Often a balance of growth and stability.</li>
+          <li><strong>Large-cap</strong> — $10 billion to $200 billion. Established companies, generally lower volatility.</li>
+          <li><strong>Mega-cap</strong> — over $200 billion. Think Apple, Microsoft, Amazon. Very liquid, very stable, slower growth.</li>
+        </ul>
+        Use the Market Cap slider on the dashboard to focus on a particular size tier.
+      </div>
+    </div>
+  </section>
+
+  {# ---- Position sizing ---- #}
+  <section class="gloss-section">
+    <h2 class="gloss-section-title">Position Sizing &amp; Portfolio</h2>
+
+    <div class="gloss-card" data-terms="position sizing max shares account size allocation">
+      <div class="gloss-term">Position Sizing</div>
+      <div class="gloss-def">
+        How much of your account to put into one stock. This app caps any single position at
+        20% of your account (configurable in <code>config.py</code>). With a $100 account that
+        means a maximum of $20 per stock — limiting the damage if a pick goes wrong.
+        <br><br>
+        The stock detail page shows exactly how many shares $20 would buy at the current price.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="paper trade hypothetical simulated trade log">
+      <div class="gloss-term">Paper Trade</div>
+      <div class="gloss-def">
+        A simulated trade where no real money moves. You record a "buy" at today's price, then
+        track how it would have performed over time. It is a way to test whether the app's
+        signals actually lead to good outcomes without risking real money.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="pnl profit loss realized unrealized gain">
+      <div class="gloss-term">P&amp;L <span class="gloss-abbr">Profit &amp; Loss</span></div>
+      <div class="gloss-def">
+        The dollar gain or loss on a position.
+        <ul class="gloss-list">
+          <li><strong>Unrealized P&amp;L</strong> — the gain/loss on a still-open position, using the current live price. It becomes real only when you sell.</li>
+          <li><strong>Realized P&amp;L</strong> — locked-in gain/loss after you close a position.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {# ---- Price ---- #}
+  <section class="gloss-section">
+    <h2 class="gloss-section-title">Price &amp; Chart Terms</h2>
+
+    <div class="gloss-card" data-terms="sma simple moving average 20 50 day trend">
+      <div class="gloss-term">SMA <span class="gloss-abbr">Simple Moving Average</span></div>
+      <div class="gloss-def">
+        The average closing price over the last N trading days, updated daily as new prices come in.
+        The chart on each stock's detail page shows the 20-day SMA (short-term trend) and 50-day
+        SMA (medium-term trend). When the shorter line is above the longer line, the stock is in a
+        short-term uptrend.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="delayed end of day eod price quote real time">
+      <div class="gloss-term">Delayed / End-of-Day Data</div>
+      <div class="gloss-def">
+        All prices in this app come from Yahoo Finance's free tier, which provides end-of-day
+        closing prices — not live quotes. The price shown is the last official closing price, not
+        the current intraday price. Always check your broker for the live price before you place
+        an order.
+      </div>
+    </div>
+
+    <div class="gloss-card" data-terms="rank delta up down change snapshot history">
+      <div class="gloss-term">Rank Delta (↑ / ↓)</div>
+      <div class="gloss-def">
+        The small badge next to a ticker on the dashboard (e.g. ↑3, ↓2) shows how many positions
+        that stock moved in the ranking since the last time you clicked Refresh Data. It compares
+        the current score-based rank to the most recent saved snapshot.
+        <ul class="gloss-list">
+          <li><strong>↑3</strong> — moved up 3 spots (improved signal).</li>
+          <li><strong>↓2</strong> — fell 2 spots (weakening signal).</li>
+          <li><strong>new</strong> — not present in the previous snapshot (newly added to watchlist or first refresh).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+function filterGloss(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('.gloss-card').forEach(function(card) {
+    var text = (card.dataset.terms + ' ' + card.textContent).toLowerCase();
+    card.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.gloss-section').forEach(function(sec) {
+    var visible = Array.from(sec.querySelectorAll('.gloss-card')).some(c => c.style.display !== 'none');
+    sec.style.display = visible ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

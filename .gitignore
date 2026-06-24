@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Data cache (fetched from Yahoo Finance — regenerated on first run)
+cache/
+
+# SQLite database (contains your personal paper trades and alerts)
+db/trades.db
+
+
+watchlist.json
+db/.secret_key
+
+# Environment / editor
+.env
+.venv/
+venv/
+.vscode/
+.idea/
